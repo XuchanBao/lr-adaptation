@@ -4,9 +4,10 @@ from models.nqm import NQM
 
 config = dict(
     batch_size=100,
-    num_steps=10000,
+    num_steps=1000,
     lr=None,
-    ndim=10000
+    ndim=10000,
+    ema=0.99
 )
 
 
@@ -32,16 +33,18 @@ def train(config):
     """
     ndim = config['ndim']
     batch_size = config['batch_size']
+    ema_decay = config['ema']
     model = NQM(ndim)
 
     for step in range(1, config['num_steps'] + 1):
         noise = np.sqrt(model.C / batch_size) * np.random.randn(ndim)
         lr = get_opt_lr(model.theta, model.H, noise) if config['lr'] is None else config['lr']
 
-        model.update(lr, batch_size, noise)
+        model.update(lr, batch_size, noise, ema_decay)
         loss = model.loss()
+        test_loss = model.loss(ema=True)
 
-        print("step: {0}, loss: {1:.4f}".format(step, loss))
+        print("step: {0}, train loss: {1:.4f}, test loss {2:.4f}".format(step, loss, test_loss))
         wandb.log({"lr": lr, "loss": loss})
 
 
